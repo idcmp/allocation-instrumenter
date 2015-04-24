@@ -197,7 +197,7 @@
                 <executions>
                     <execution>
                         <id>embed-jars</id>
-                        <phase>dont-prepare-package</phase>
+                        <phase>prepare-package</phase>
                         <goals>
                             <goal>jarjar</goal>
                         </goals>
