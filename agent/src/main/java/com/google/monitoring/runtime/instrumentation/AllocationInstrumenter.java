@@ -21,6 +21,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 
 import java.lang.instrument.ClassFileTransformer;
+import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
@@ -114,6 +115,14 @@ public class AllocationInstrumenter implements ClassFileTransformer {
     ConstructorInstrumenter.subclassesAlso = args.contains("subclassesAlso");
     inst.addTransformer(new ConstructorInstrumenter(),
         inst.isRetransformClassesSupported());
+
+    inst.addTransformer(new ClassFileTransformer() {
+      @Override
+      public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
+        System.out.println("className = " + className);
+        return classfileBuffer;
+      }
+    }, inst.isRetransformClassesSupported());
 
     if (!args.contains("manualOnly")) {
       bootstrap(inst);

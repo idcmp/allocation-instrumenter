@@ -189,7 +189,7 @@
                     <show>public</show>
                 </configuration>
             </plugin>
-            <!-- embed dependencies -->
+            <!-- embed dependencies
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>jarjar-maven-plugin</artifactId>
@@ -252,6 +252,7 @@
                     </execution>
                 </executions>
             </plugin>
+            -->
             <!-- customize manifest -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
