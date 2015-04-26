@@ -1,4 +1,4 @@
-package com.google.monitoring.runtime.instrumentation;
+package org.linuxstuff.ebb0;
 
 import java.lang.instrument.Instrumentation;
 import java.util.Arrays;
@@ -50,8 +50,9 @@ public class EbbAgent {
             Class.forName("sun.security.provider.PolicyFile");
             Class.forName("java.util.ResourceBundle");
             Class.forName("java.util.Date");
+            Class.forName(RunnableInstrumenter.class.getCanonicalName());
         } catch (Throwable t) {
-            // NOP
+            System.out.println("t = " + t);
         }
 
         if (!inst.isRetransformClassesSupported()) {
@@ -62,13 +63,13 @@ public class EbbAgent {
         // Don't try to rewrite classes loaded by the bootstrap class
         // loader if this class wasn't loaded by the bootstrap class
         // loader.
-        if (EbbAgent.class.getClassLoader() != null) {
-            canRewriteBootstrap = false;
-            // The loggers aren't installed yet, so we use println.
-            System.err.println("Class loading breakage: " +
-                    "Will not be able to instrument JDK classes");
-            return;
-        }
+//        if (EbbAgent.class.getClassLoader() != null) {
+//            canRewriteBootstrap = false;
+//            // The loggers aren't installed yet, so we use println.
+//            System.err.println("Class loading breakage: " +
+//                    "Will not be able to instrument JDK classes");
+//            return;
+//        }
 
         canRewriteBootstrap = true;
         List<String> args = Arrays.asList(

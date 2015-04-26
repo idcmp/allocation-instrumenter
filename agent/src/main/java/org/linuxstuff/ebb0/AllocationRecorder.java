@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-package com.google.monitoring.runtime.instrumentation;
+package org.linuxstuff.ebb0;
 
 import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;

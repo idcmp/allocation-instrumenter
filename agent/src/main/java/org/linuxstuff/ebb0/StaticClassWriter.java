@@ -36,7 +36,7 @@
 // the comments.  The original author is Eric Bruneton.
 
 
-package com.google.monitoring.runtime.instrumentation;
+package org.linuxstuff.ebb0;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;

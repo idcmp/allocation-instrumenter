@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.monitoring.runtime.instrumentation;
+package org.linuxstuff.ebb0;
 
 /**
  * This interface describes a function that is used to sample an allocation. 

@@ -1,12 +1,17 @@
-package com.google.monitoring.runtime.instrumentation;
+package org.linuxstuff.ebb0;
 
-import org.objectweb.asm.*;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.LocalVariablesSorter;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -22,7 +27,8 @@ public class RunnableInstrumenter implements ClassFileTransformer {
     // constructor return for the given class.
 
     private static final Logger logger =
-            Logger.getLogger(ConstructorInstrumenter.class.getName());
+            Logger.getLogger(RunnableInstrumenter.class.getName());
+
     private static ConcurrentHashMap<Class<?>, List<ConstructorCallback<?>>>
             samplerMap =
             new ConcurrentHashMap<Class<?>, List<ConstructorCallback<?>>>();
@@ -41,13 +47,14 @@ public class RunnableInstrumenter implements ClassFileTransformer {
     static boolean subclassesAlso;
 
     // Only for package access (specifically, AllocationInstrumenter)
-    RunnableInstrumenter() { }
+    RunnableInstrumenter() {
+    }
 
     /**
      * Ensures that the given sampler will be invoked every time a constructor
      * for class c is invoked.
      *
-     * @param c The class to be tracked
+     * @param c       The class to be tracked
      * @param sampler the code to be invoked when an instance of c is constructed
      * @throws UnmodifiableClassException if c cannot be modified.
      */
@@ -77,18 +84,26 @@ public class RunnableInstrumenter implements ClassFileTransformer {
     /**
      * {@inheritDoc}
      */
-    @Override public byte[] transform(
+    @Override
+    public byte[] transform(
             ClassLoader loader, String className, Class<?> classBeingRedefined,
-            ProtectionDomain protectionDomain, byte[] classfileBuffer)  {
-        System.out.println("className = " + className);
-        if ((classBeingRedefined == null) ||
-                (!samplerMap.containsKey(classBeingRedefined))) {
-            return null;
-        }
-        if (!AllocationInstrumenter.canRewriteClass(className, loader)) {
-            throw new RuntimeException(
-                    new UnmodifiableClassException("cannot instrument " + className));
-        }
+            ProtectionDomain protectionDomain, byte[] classfileBuffer) {
+
+        System.out.println("loader = [" + loader + "], className = [" + className + "], classBeingRedefined = [" +
+                classBeingRedefined + "], protectionDomain = [" + protectionDomain + "], classfileBuffer = [" +
+                classfileBuffer + "]");
+        //        if (className.startsWith("java/") || className.startsWith("sun/")) {
+//            if (!"java/lang/Runnable".equals(className) &&
+//                    !className.startsWith("java/util/concurrent/")) {
+//                return null;em
+//            }
+//        }
+
+//        if (!AllocationInstrumenter.canRewriteClass(className, loader)) {
+//            throw new RuntimeException(
+//                    new UnmodifiableClassException("cannot instrument " + className));
+//        }
+//        System.out.println("className = " + className);
         return instrument(classfileBuffer, classBeingRedefined);
     }
 
@@ -96,7 +111,7 @@ public class RunnableInstrumenter implements ClassFileTransformer {
      * Given the bytes representing a class, add invocations of the
      * ConstructorCallback method to the constructor.
      *
-     * @param originalBytes the original <code>byte[]</code> code.
+     * @param originalBytes       the original <code>byte[]</code> code.
      * @param classBeingRedefined the class being redefined.
      * @return the instrumented <code>byte[]</code> code.
      */
@@ -108,7 +123,7 @@ public class RunnableInstrumenter implements ClassFileTransformer {
             VerifyingClassAdapter vcw =
                     new VerifyingClassAdapter(cw, originalBytes, cr.getClassName());
             ClassVisitor adapter =
-                    new ConstructorClassAdapter(vcw, classBeingRedefined);
+                    new RunnableClassAdapter(vcw, classBeingRedefined);
 
             cr.accept(adapter, ClassReader.SKIP_FRAMES);
 
@@ -135,7 +150,9 @@ public class RunnableInstrumenter implements ClassFileTransformer {
          * this should be AllocationClassAdapter.visitMethod().
          */
         public LocalVariablesSorter lvs = null;
+
         Class<?> cl;
+
         ConstructorMethodAdapter(MethodVisitor mv, Class<?> cl) {
             super(Opcodes.ASM5, mv);
             this.cl = cl;
@@ -144,7 +161,8 @@ public class RunnableInstrumenter implements ClassFileTransformer {
         /**
          * Inserts the appropriate INVOKESTATIC call
          */
-        @Override public void visitInsn(int opcode) {
+        @Override
+        public void visitInsn(int opcode) {
             if ((opcode == Opcodes.ARETURN) ||
                     (opcode == Opcodes.IRETURN) ||
                     (opcode == Opcodes.LRETURN) ||
@@ -157,8 +175,8 @@ public class RunnableInstrumenter implements ClassFileTransformer {
                 super.visitVarInsn(Opcodes.ALOAD, 0);
                 super.visitMethodInsn(
                         Opcodes.INVOKESTATIC,
-                        "com/google/monitoring/runtime/instrumentation/ConstructorInstrumenter",
-                        "invokeSamplers",
+                        "org/linuxstuff/ebb0/RunnableInstrumenter",
+                        "hello",
                         "(Ljava/lang/Object;)V",
                         false);
             }
@@ -166,11 +184,18 @@ public class RunnableInstrumenter implements ClassFileTransformer {
         }
     }
 
+
+    @SuppressWarnings("unchecked")
+    public static void hello(Object o) {
+        System.out.println("o = [" + o + "]");
+    }
+
     /**
      * Bytecode is rewritten to invoke this method; it calls the sampler for
      * the given class.  Note that, unless the javaagent command line argument
      * "subclassesAlso" is specified, it won't do anything if o is a subclass of
      * the class that was supposed to be tracked.
+     *
      * @param o the object passed to the samplers.
      */
     @SuppressWarnings("unchecked")
@@ -200,12 +225,24 @@ public class RunnableInstrumenter implements ClassFileTransformer {
      * The class that deals with per-class transformations.  Basically, invokes
      * the per-method transformer above if the method is an {@code <init>} method.
      */
-    static class ConstructorClassAdapter extends ClassVisitor {
+    static class RunnableClassAdapter extends ClassVisitor {
         Class<?> cl;
-        public ConstructorClassAdapter(ClassVisitor cv, Class<?> cl) {
+
+        public RunnableClassAdapter(ClassVisitor cv, Class<?> cl) {
             super(Opcodes.ASM5, cv);
             this.cl = cl;
         }
+
+        @Override
+        public void visit(int version, int access, String name, String signature, String superName, String[]
+                interfaces) {
+            super.visit(version, access, name, signature, superName, interfaces);
+            System.out.println("version = [" + version + "], access = [" + access + "], name = [" + name + "], " +
+                    "signature = [" + signature + "], superName = [" + superName + "], interfaces = [" + Arrays
+                    .deepToString(interfaces) +
+                    "]");
+        }
+
 
         /**
          * For each method in the class being instrumented,
@@ -213,13 +250,13 @@ public class RunnableInstrumenter implements ClassFileTransformer {
          * MethodVisitor is used to visit the method.  Note that a new
          * MethodVisitor is constructed for each method.
          */
-        @Override
-        public MethodVisitor visitMethod(int access, String name, String desc,
-                                         String signature, String[] exceptions) {
+//        @Override
+        public MethodVisitor visitMXethod(int access, String name, String desc,
+                                          String signature, String[] exceptions) {
             MethodVisitor mv =
                     cv.visitMethod(access, name, desc, signature, exceptions);
 
-            if ((mv != null) && "<init>".equals(name)){
+            if ((mv != null) && "<init>".equals(name)) {
                 ConstructorMethodAdapter aimv = new ConstructorMethodAdapter(mv, cl);
                 LocalVariablesSorter lvs = new LocalVariablesSorter(access, desc, aimv);
                 aimv.lvs = lvs;
