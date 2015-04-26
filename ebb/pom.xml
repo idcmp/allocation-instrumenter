@@ -81,6 +81,10 @@
                                     <shadedPattern>org.linuxstuff.ebb.ow</shadedPattern>
                                 </relocation>
                                 <relocation>
+                                    <pattern>com.google.monitoring.runtime.instrumentation</pattern>
+                                    <shadedPattern>org.linuxstuff.ebb</shadedPattern>
+                                </relocation>
+                                <relocation>
                                     <pattern>com.google</pattern>
                                     <shadedPattern>org.linuxstuff.ebb.c</shadedPattern>
                                 </relocation>
