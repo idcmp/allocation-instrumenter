@@ -112,50 +112,9 @@ public class AllocationInstrumenter implements ClassFileTransformer {
     // When "subclassesAlso" is specified, samplers are also invoked when
     // SubclassOfA.<init> is called while only class A is specified to be
     // instrumented.
-    ConstructorInstrumenter.subclassesAlso = args.contains("subclassesAlso");
-    inst.addTransformer(new ConstructorInstrumenter(),
+    RunnableInstrumenter.subclassesAlso = args.contains("subclassesAlso");
+    inst.addTransformer(new RunnableInstrumenter(),
         inst.isRetransformClassesSupported());
-
-    inst.addTransformer(new ClassFileTransformer() {
-      @Override
-      public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-        System.out.println("className = " + className);
-        return classfileBuffer;
-      }
-    }, inst.isRetransformClassesSupported());
-
-    if (!args.contains("manualOnly")) {
-      bootstrap(inst);
-    }
-  }
-
-  private static void bootstrap(Instrumentation inst) {
-    inst.addTransformer(new AllocationInstrumenter(),
-        inst.isRetransformClassesSupported());
-
-    if (!canRewriteBootstrap) {
-      return;
-    }
-
-    // Get the set of already loaded classes that can be rewritten.
-    Class<?>[] classes = inst.getAllLoadedClasses();
-    ArrayList<Class<?>> classList = new ArrayList<Class<?>>();
-    for (int i = 0; i < classes.length; i++) {
-      if (inst.isModifiableClass(classes[i])) {
-        classList.add(classes[i]);
-      }
-    }
-
-    // Reload classes, if possible.
-    Class<?>[] workaround = new Class<?>[classList.size()];
-    try {
-      inst.retransformClasses(classList.toArray(workaround));
-    } catch (UnmodifiableClassException e) {
-      System.err.println("AllocationInstrumenter was unable to " +
-          "retransform early loaded classes.");
-    }
-
-
   }
 
   @Override public byte[] transform(
