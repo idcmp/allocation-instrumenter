@@ -1,0 +1,12 @@
+looking for Executor or Runnable
+
+
+We're going to instrument the constructor of a Runnable.
+so:
+  if the class is abstract, then it's not a Runnable.
+  if the class implements Runnable, then Yes Runnable.
+  if the class has a run() then Maybe Runnable
+  if the class doesn't have a run(), but extends another class, then maybe Runnable
+
+if the class has a execute() then Maybe Executor
+if the class impl Executor, then Yes Executor
