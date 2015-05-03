@@ -10,6 +10,8 @@ import java.security.ProtectionDomain;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static org.linuxstuff.ebb.YesNoMaybe.NO;
+
 public class EbbTransformer implements ClassFileTransformer {
 
     private static final Logger logger = Logger.getLogger(EbbTransformer.class.getName());
@@ -23,19 +25,34 @@ public class EbbTransformer implements ClassFileTransformer {
             protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 
         try {
-            ClassReader cr = new ClassReader(classfileBuffer);
-            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
-            VerifyingClassAdapter vcw =
-                    new VerifyingClassAdapter(cw, classfileBuffer, cr.getClassName());
+            {
+                ClassReader cr = new ClassReader(classfileBuffer);
+                ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
+                VerifyingClassAdapter vcw =
+                        new VerifyingClassAdapter(cw, classfileBuffer, cr.getClassName());
 
-            EbbIsRunnableClassVisitor adapter =
-                    new EbbIsRunnableClassVisitor(vcw, classBeingRedefined);
+                EbbIsRunnableClassVisitor adapter =
+                        new EbbIsRunnableClassVisitor(vcw, classBeingRedefined);
 
-//            ClassVisitor adapter = new TraceClassVisitor(vcw, new PrintWriter(System.out));
-            cr.accept(adapter, ClassReader.SKIP_FRAMES);
+                cr.accept(adapter, ClassReader.SKIP_FRAMES);
 
-            System.out.println(adapter.isRunnable() + " " + className);
-            return vcw.toByteArray();
+                if (adapter.isRunnable() == NO) {
+                    return vcw.toByteArray();
+                }
+            }
+
+            {
+                ClassReader cr = new ClassReader(classfileBuffer);
+                ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
+                VerifyingClassAdapter vcw =
+                        new VerifyingClassAdapter(cw, classfileBuffer, cr.getClassName());
+
+                EbbActualRunnableClassVisitor adapter2 =
+                        new EbbActualRunnableClassVisitor(vcw);
+
+                cr.accept(adapter2, ClassReader.SKIP_FRAMES);
+                return vcw.toByteArray();
+            }
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, "Failed to instrument class " + className, e);
             throw e;

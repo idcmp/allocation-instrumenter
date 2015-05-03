@@ -21,6 +21,18 @@ public class HelloWorld {
 
         public void run() {
             System.out.println("It's now: " + new Date());
+
+            try {
+                Tada2.class.getDeclaredField("jamesIsAwe$ome").set(this, "Boom!");
+
+                Object boom = Tada2.class.getDeclaredField("jamesIsAwe$ome").get(this);
+                System.out.println("boom = " + boom);
+
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (NoSuchFieldException e) {
+                e.printStackTrace();
+            }
         }
     }
 

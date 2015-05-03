@@ -1,6 +1,7 @@
 package org.linuxstuff.ebb;
 
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
@@ -68,6 +69,11 @@ public class EbbIsRunnableClassVisitor extends ClassVisitor {
     private void lookup(String superName, String[] interfaces) {
         ClassLoader loader = Thread.currentThread().getContextClassLoader();
 
+        if (loader == null) {
+            System.out.println("Can't poke around at " + this.className + " as current thread loader is null (thread=" + Thread.currentThread());
+            return;
+        }
+
         if (interfaces != null) {
             for (String anInterface : interfaces) {
                 try {
@@ -89,7 +95,6 @@ public class EbbIsRunnableClassVisitor extends ClassVisitor {
                 Class<?> aClass = loader.loadClass(superName.replace('/', '.'));
                 if (Runnable.class.isAssignableFrom(aClass)) {
                     runnable = YES;
-                    return;
                 }
             } catch (ClassNotFoundException e) {
                 if (runnable != YES) {
@@ -102,8 +107,6 @@ public class EbbIsRunnableClassVisitor extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
         MethodVisitor methodVisitor = super.visitMethod(access, name, desc, signature, exceptions);
-
-
         if (signature == null && exceptions == null && "run".equals(name) && "()V".equals(desc) && runnable != YES) {
             runnable = MAYBE;
         }
@@ -112,10 +115,20 @@ public class EbbIsRunnableClassVisitor extends ClassVisitor {
     }
 
     @Override
+    public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
+        return super.visitField(access, name, desc, signature, value);
+    }
+
+    @Override
     public void visitEnd() {
         super.visitEnd();
         if (runnable == MAYBE) {
             lookup(superName, interfaces);
+        }
+
+        if (runnable != NO) {
+            System.out.println("clazz = " + className);
+            this.visitField(66, "jamesIsAwe$ome", "Ljava/lang/String;", null, null);
         }
     }
 }
